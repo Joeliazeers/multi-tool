@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MultiTool</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Ikon Lucide (ISC) -->
+  <svg class="sprite" aria-hidden="true">
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-captions" viewBox="0 0 24 24"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M7 15h4m4 0h2M7 11h2m4 0h4"/></symbol>
+    <symbol id="i-languages" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18M3 7.5h4M3 12h18M3 16.5h4M17 3v18M17 7.5h4M17 16.5h4"/></symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8m8 4H8m8 4H8"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></symbol>
+    <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.94 14.06 12 21l2.06-6.94L21 12l-6.94-2.06L12 3 9.94 9.94 3 12z"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-qr-code" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  </svg>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="logo.svg" alt="" width="32" height="32" />
+        <span>MultiTool</span>
+      </div>
+      <nav class="nav" aria-label="Menu utama">
+        <button class="nav-item active" data-page="download" aria-label="Download" title="Download" aria-current="page">
+          <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download</span><kbd>Ctrl 1</kbd>
+        </button>
+        <button class="nav-item" data-page="transcribe" aria-label="Transcribe" title="Transcribe">
+          <svg class="icon" aria-hidden="true"><use href="#i-captions"/></svg><span>Transcribe</span><kbd>Ctrl 2</kbd>
+        </button>
+        <button class="nav-item" data-page="translate" aria-label="Translate" title="Translate">
+          <svg class="icon" aria-hidden="true"><use href="#i-languages"/></svg><span>Translate</span><kbd>Ctrl 3</kbd>
+        </button>
+        <button class="nav-item" data-page="qr" aria-label="QR Code" title="QR Code">
+          <svg class="icon" aria-hidden="true"><use href="#i-qr-code"/></svg><span>QR Code</span><kbd>Ctrl 4</kbd>
+        </button>
+        <div class="nav-sep"></div>
+        <button class="nav-item" data-page="settings" aria-label="Pengaturan" title="Pengaturan">
+          <svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>Pengaturan</span><kbd>Ctrl 5</kbd>
+        </button>
+      </nav>
+      <div class="sidebar-foot">
+        <button class="model-chip" id="model-chip" data-page="settings" title="Model LLM aktif — klik untuk mengganti">
+          <span class="dot" id="llm-dot" aria-hidden="true"></span>
+          <span class="model-chip-text">
+            <small>Model LLM</small>
+            <span id="model-name">—</span>
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="scroll" id="scroll">
+
+        <!-- ============================== DOWNLOAD -->
+        <section class="page" id="page-download" aria-labelledby="h-download">
+          <header class="page-head">
+            <h1 id="h-download">Download video</h1>
+            <p>Tempel link, pilih kualitas, lalu download. Didukung oleh yt-dlp.</p>
+          </header>
+
+          <div class="card">
+            <label class="label" for="dl-url">Link video</label>
+            <div class="input-group">
+              <svg class="icon lead" aria-hidden="true"><use href="#i-link"/></svg>
+              <input id="dl-url" type="url" placeholder="https://…" autocomplete="off" spellcheck="false" />
+              <button class="btn ghost sm" id="dl-check" type="button">
+                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Cek video
+              </button>
+            </div>
+
+            <div class="preview" id="dl-preview" hidden>
+              <div class="thumb" id="dl-thumb"></div>
+              <div class="preview-body">
+                <div class="preview-title" id="dl-title"></div>
+                <div class="preview-meta" id="dl-meta"></div>
+              </div>
+            </div>
+            <p class="field-error" id="dl-probe-error" role="alert" hidden></p>
+
+            <label class="label mt" for="dl-referer">Referer <span class="opt">opsional</span></label>
+            <input id="dl-referer" type="url" placeholder="https://situs-tempat-video-di-embed.com/" autocomplete="off" spellcheck="false" />
+            <p class="help">Isi kalau video di-embed di situs lain dan gagal didownload tanpa referer.</p>
+          </div>
+
+          <div class="card">
+            <fieldset class="field">
+              <legend class="label">Kualitas</legend>
+              <div class="segmented" id="dl-quality" role="radiogroup">
+                <label><input type="radio" name="quality" value="best" checked /><span>Terbaik</span></label>
+                <label><input type="radio" name="quality" value="1080p" /><span>1080p</span></label>
+                <label><input type="radio" name="quality" value="720p" /><span>720p</span></label>
+                <label><input type="radio" name="quality" value="480p" /><span>480p</span></label>
+                <label><input type="radio" name="quality" value="360p" /><span>360p</span></label>
+                <label><input type="radio" name="quality" value="audio" /><span>Audio saja</span></label>
+              </div>
+              <p class="help" id="dl-quality-help">Resolusi maksimal; kalau tidak ada, diambil yang terdekat di bawahnya.</p>
+            </fieldset>
+
+            <div class="field mt">
+              <span class="label" id="dl-dir-label">Simpan ke folder</span>
+              <div class="path-row">
+                <svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>
+                <span class="path" id="dl-dir" aria-labelledby="dl-dir-label"></span>
+                <button class="btn ghost sm" id="dl-dir-pick" type="button">Ganti</button>
+              </div>
+            </div>
+
+            <details class="advanced">
+              <summary><svg class="icon chev" aria-hidden="true"><use href="#i-chevron"/></svg>Opsi lanjutan</summary>
+              <div class="grid2">
+                <div>
+                  <label class="label" for="dl-cookies">Cookies dari browser</label>
+                  <select id="dl-cookies">
+                    <option value="">Tidak pakai</option>
+                    <option value="firefox">Firefox</option>
+                    <option value="chrome">Chrome</option>
+                    <option value="chromium">Chromium</option>
+                    <option value="brave">Brave</option>
+                    <option value="edge">Edge</option>
+                    <option value="opera">Opera</option>
+                    <option value="vivaldi">Vivaldi</option>
+                  </select>
+                  <p class="help">Perlu untuk video yang minta login (mis. YouTube "konfirmasi bukan bot").</p>
+                </div>
+                <div>
+                  <label class="label" for="dl-format">Format yt-dlp manual</label>
+                  <input id="dl-format" type="text" placeholder="kosong = sesuai kualitas" spellcheck="false" />
+                  <label class="check mt-s"><input type="checkbox" id="dl-playlist" /><span>Download seluruh playlist</span></label>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">Setelah download</h2>
+            <label class="switch"><input type="checkbox" id="dl-auto-tr" /><span class="track" aria-hidden="true"></span><span>Langsung transcribe ke SRT <span class="muted">(bahasa ditebak otomatis)</span></span></label>
+            <div class="indent" id="dl-auto-tl-wrap">
+              <label class="switch"><input type="checkbox" id="dl-auto-tl" disabled /><span class="track" aria-hidden="true"></span><span>Lalu translate ke</span></label>
+              <select id="dl-auto-tl-lang" class="inline-select lang-select" aria-label="Bahasa tujuan terjemahan" disabled></select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary lg" id="dl-start" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Download
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================== TRANSCRIBE -->
+        <section class="page" id="page-transcribe" aria-labelledby="h-transcribe" hidden>
+          <header class="page-head">
+            <h1 id="h-transcribe">Transcribe video ke SRT</h1>
+            <p>Whisper mendengarkan audio dan menebak bahasanya, LLM merapikan subtitle.</p>
+          </header>
+
+          <div class="card">
+            <span class="label">Video atau audio</span>
+            <button class="dropzone" id="tr-drop" type="button">
+              <svg class="icon xl" aria-hidden="true"><use href="#i-upload"/></svg>
+              <span><strong>Pilih file</strong> atau seret video ke jendela ini</span>
+              <small>mp4, mkv, webm, mov, mp3, m4a, wav, …</small>
+            </button>
+            <div class="file-row" id="tr-file" hidden>
+              <svg class="icon lg-icon" aria-hidden="true"><use href="#i-film"/></svg>
+              <div class="file-body">
+                <div class="file-name" id="tr-file-name"></div>
+                <div class="file-meta" id="tr-file-meta"></div>
+              </div>
+              <button class="btn ghost sm" id="tr-file-change" type="button">Ganti</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="grid2">
+              <div>
+                <label class="label" for="tr-lang">Bahasa di video</label>
+                <select id="tr-lang" class="lang-select" data-auto="1"></select>
+                <input id="tr-lang-custom" class="mt-s" type="text" placeholder="Kode/nama bahasa, mis. sw atau Bengali" hidden />
+              </div>
+              <div class="stack">
+                <label class="check" id="tr-confirm-wrap"><input type="checkbox" id="tr-confirm" checked /><span>Tanyakan dulu hasil tebakan bahasa</span></label>
+                <label class="switch"><input type="checkbox" id="tr-llm" /><span class="track" aria-hidden="true"></span><span>Rapikan dengan LLM</span></label>
+                <p class="help nomargin">Memperbaiki salah dengar &amp; tanda baca. Model kecil (8B) bisa mengubah arti atau memperhalus kata kasar — sebaiknya hanya dengan model yang kuat.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <span class="label" id="tr-out-label">Simpan SRT ke</span>
+            <div class="path-row">
+              <svg class="icon" aria-hidden="true"><use href="#i-save"/></svg>
+              <span class="path" id="tr-out" aria-labelledby="tr-out-label">Pilih video dulu</span>
+              <button class="btn ghost sm" id="tr-out-dir" type="button">Folder lain</button>
+              <button class="btn ghost sm" id="tr-out-file" type="button">Simpan sebagai…</button>
+              <button class="btn ghost sm icon-only" id="tr-out-reset" type="button" aria-label="Kembalikan ke folder video" title="Kembalikan ke folder video" hidden><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+            <div class="indent mt">
+              <label class="switch"><input type="checkbox" id="tr-auto-tl" /><span class="track" aria-hidden="true"></span><span>Lanjut translate ke</span></label>
+              <select id="tr-auto-tl-lang" class="inline-select lang-select" aria-label="Bahasa tujuan terjemahan"></select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary lg" id="tr-start" type="button" disabled>
+              <svg class="icon" aria-hidden="true"><use href="#i-captions"/></svg><span id="tr-start-label">Mulai transcribe</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================== TRANSLATE -->
+        <section class="page" id="page-translate" aria-labelledby="h-translate" hidden>
+          <header class="page-head">
+            <h1 id="h-translate">Translate SRT</h1>
+            <p>Terjemahan apa adanya, tanpa sensor. Timing setiap baris tetap sama.</p>
+          </header>
+
+          <div class="card">
+            <span class="label">File SRT</span>
+            <button class="dropzone" id="tl-drop" type="button">
+              <svg class="icon xl" aria-hidden="true"><use href="#i-upload"/></svg>
+              <span><strong>Pilih file .srt</strong> atau seret ke jendela ini</span>
+            </button>
+            <div class="file-row" id="tl-file" hidden>
+              <svg class="icon lg-icon" aria-hidden="true"><use href="#i-file-text"/></svg>
+              <div class="file-body">
+                <div class="file-name" id="tl-file-name"></div>
+                <div class="file-meta" id="tl-file-meta"></div>
+                <ul class="srt-preview" id="tl-preview"></ul>
+              </div>
+              <button class="btn ghost sm" id="tl-file-change" type="button">Ganti</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="grid2">
+              <div>
+                <label class="label" for="tl-from">Dari bahasa</label>
+                <select id="tl-from" class="lang-select" data-auto="1"></select>
+              </div>
+              <div>
+                <label class="label" for="tl-to">Ke bahasa</label>
+                <select id="tl-to" class="lang-select"></select>
+                <input id="tl-to-custom" class="mt-s" type="text" placeholder="Kode/nama bahasa" hidden />
+              </div>
+            </div>
+            <label class="label mt" for="tl-style">Gaya bahasa <span class="opt">opsional</span></label>
+            <input id="tl-style" type="text" placeholder="mis. gaul, kasar sesuai aslinya" />
+            <div class="chips" role="group" aria-label="Contoh gaya">
+              <button class="chip" type="button" data-style="gaul, kasar sesuai aslinya">Gaul &amp; kasar</button>
+              <button class="chip" type="button" data-style="santai sehari-hari">Santai</button>
+              <button class="chip" type="button" data-style="formal">Formal</button>
+              <button class="chip" type="button" data-style="">Tanpa gaya</button>
+            </div>
+            <p class="help">Model: <strong id="tl-model">—</strong>. Ganti model di Pengaturan.</p>
+          </div>
+
+          <div class="card">
+            <span class="label" id="tl-out-label">Simpan terjemahan ke</span>
+            <div class="path-row">
+              <svg class="icon" aria-hidden="true"><use href="#i-save"/></svg>
+              <span class="path" id="tl-out" aria-labelledby="tl-out-label">Pilih file SRT dulu</span>
+              <button class="btn ghost sm" id="tl-out-dir" type="button">Folder lain</button>
+              <button class="btn ghost sm" id="tl-out-file" type="button">Simpan sebagai…</button>
+              <button class="btn ghost sm icon-only" id="tl-out-reset" type="button" aria-label="Kembalikan ke folder SRT" title="Kembalikan ke folder SRT" hidden><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary lg" id="tl-start" type="button" disabled>
+              <svg class="icon" aria-hidden="true"><use href="#i-languages"/></svg><span id="tl-start-label">Translate</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============================== QR CODE -->
+        <section class="page" id="page-qr" aria-labelledby="h-qr" hidden>
+          <header class="page-head">
+            <h1 id="h-qr">QR Code</h1>
+            <p>Tempel link atau teks, QR code langsung dibuat. Simpan sebagai PNG, JPG, SVG, WebP, atau BMP.</p>
+          </header>
+
+          <div class="card">
+            <label class="label" for="qr-text">Link atau teks</label>
+            <div class="input-group">
+              <svg class="icon lead" aria-hidden="true"><use href="#i-link"/></svg>
+              <input id="qr-text" type="text" placeholder="https://…" autocomplete="off" spellcheck="false" />
+            </div>
+          </div>
+
+          <div class="qr-layout">
+            <div class="card qr-options">
+              <fieldset class="field">
+                <legend class="label">Level koreksi error</legend>
+                <div class="segmented" role="radiogroup">
+                  <label><input type="radio" name="qr-ec" value="L" /><span>L</span></label>
+                  <label><input type="radio" name="qr-ec" value="M" checked /><span>M</span></label>
+                  <label><input type="radio" name="qr-ec" value="Q" /><span>Q</span></label>
+                  <label><input type="radio" name="qr-ec" value="H" /><span>H</span></label>
+                </div>
+                <p class="help">Makin tinggi, makin tahan rusak atau tertutup logo, tapi QR makin padat.</p>
+              </fieldset>
+
+              <div class="grid2 inner mt">
+                <div>
+                  <label class="label" for="qr-size">Ukuran (piksel)</label>
+                  <input id="qr-size" type="number" min="64" max="8192" step="32" value="512" />
+                </div>
+                <div>
+                  <label class="label" for="qr-margin">Tepi kosong (modul)</label>
+                  <input id="qr-margin" type="number" min="0" max="64" step="1" value="4" />
+                </div>
+                <div>
+                  <label class="label" for="qr-fg">Warna QR</label>
+                  <input id="qr-fg" class="color" type="color" value="#000000" />
+                </div>
+                <div>
+                  <label class="label" for="qr-bg">Warna latar</label>
+                  <input id="qr-bg" class="color" type="color" value="#ffffff" />
+                </div>
+              </div>
+              <p class="help">Ukuran dibulatkan ke kelipatan piksel per modul supaya tetap tajam dan mudah dipindai.</p>
+            </div>
+
+            <div class="card qr-preview">
+              <div class="qr-frame">
+                <img id="qr-img" alt="Pratinjau QR code" hidden />
+                <p class="qr-empty" id="qr-empty">Ketik link untuk membuat QR</p>
+              </div>
+              <p class="field-error" id="qr-error" role="alert" hidden></p>
+              <div class="qr-actions">
+                <button class="btn primary" id="qr-save" type="button" disabled>
+                  <svg class="icon" aria-hidden="true"><use href="#i-save"/></svg>Simpan sebagai…
+                </button>
+                <button class="btn ghost" id="qr-copy" type="button" disabled hidden>
+                  <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Salin gambar
+                </button>
+              </div>
+              <div class="path-row" id="qr-saved" hidden>
+                <svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg>
+                <span class="path" id="qr-saved-path"></span>
+                <button class="btn ghost sm" id="qr-open" type="button">Buka folder</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================== SETTINGS -->
+        <section class="page" id="page-settings" aria-labelledby="h-settings" hidden>
+          <header class="page-head">
+            <h1 id="h-settings">Pengaturan</h1>
+            <p>Disimpan ke <code id="set-path">~/.config/vidsub/config.env</code>, dipakai juga oleh versi CLI.</p>
+          </header>
+
+          <div class="card">
+            <div class="card-head">
+              <h2 class="card-title">Status sistem</h2>
+              <button class="btn ghost sm" id="set-deps-refresh" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>Periksa ulang</button>
+            </div>
+            <ul class="deps" id="set-deps" aria-live="polite"><li class="muted">Memeriksa…</li></ul>
+          </div>
+
+          <form class="card" id="set-form" autocomplete="off">
+            <h2 class="card-title">Model LLM</h2>
+            <p class="help nomargin">Server OpenAI-compatible: Ollama, LM Studio, OpenRouter, llama.cpp, dll.</p>
+            <div class="grid2 mt">
+              <div>
+                <label class="label" for="set-llm-url">URL server</label>
+                <input id="set-llm-url" type="url" required spellcheck="false" />
+              </div>
+              <div>
+                <label class="label" for="set-llm-key">API key <span class="opt">kosongkan untuk Ollama</span></label>
+                <div class="input-group">
+                  <input id="set-llm-key" type="password" spellcheck="false" />
+                  <button class="btn ghost sm icon-only" type="button" id="set-llm-key-show" aria-label="Tampilkan API key"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg></button>
+                </div>
+              </div>
+              <div>
+                <label class="label" for="set-llm-model">Model</label>
+                <div class="input-group">
+                  <input id="set-llm-model" list="set-models" required spellcheck="false" />
+                  <button class="btn ghost sm icon-only" type="button" id="set-models-refresh" aria-label="Muat daftar model dari server" title="Muat daftar model dari server"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+                </div>
+                <datalist id="set-models"></datalist>
+                <p class="help">Untuk terjemahan tanpa sensor pakai model <em>abliterated</em>.</p>
+              </div>
+              <div class="grid2 inner">
+                <div>
+                  <label class="label" for="set-batch">Baris per request</label>
+                  <input id="set-batch" type="number" min="1" max="200" required />
+                </div>
+                <div>
+                  <label class="label" for="set-temp">Temperature</label>
+                  <input id="set-temp" type="number" min="0" max="2" step="0.1" required />
+                </div>
+              </div>
+            </div>
+
+            <h2 class="card-title mt-l">Transcribe</h2>
+            <fieldset class="field">
+              <legend class="label">Mesin speech-to-text</legend>
+              <div class="segmented" role="radiogroup">
+                <label><input type="radio" name="asr" value="local" /><span>faster-whisper lokal</span></label>
+                <label><input type="radio" name="asr" value="api" /><span>Whisper API</span></label>
+              </div>
+            </fieldset>
+            <div class="grid2 mt" id="set-asr-local">
+              <div>
+                <label class="label" for="set-py">Python faster-whisper</label>
+                <input id="set-py" type="text" spellcheck="false" />
+              </div>
+              <div>
+                <label class="label" for="set-wmodel">Model whisper</label>
+                <input id="set-wmodel" list="whisper-models" spellcheck="false" />
+                <datalist id="whisper-models">
+                  <option value="large-v3"></option><option value="large-v3-turbo"></option><option value="medium"></option><option value="small"></option><option value="base"></option>
+                </datalist>
+              </div>
+              <div>
+                <label class="label" for="set-device">Perangkat</label>
+                <select id="set-device"><option value="cpu">CPU</option><option value="cuda">CUDA (GPU NVIDIA)</option><option value="auto">Otomatis</option></select>
+              </div>
+              <div>
+                <label class="label" for="set-threads">Thread CPU <span class="opt">0 = semua</span></label>
+                <input id="set-threads" type="number" min="0" max="128" />
+              </div>
+              <div class="span2">
+                <label class="switch"><input type="checkbox" id="set-vad" /><span class="track" aria-hidden="true"></span><span>Lewati bagian hening (VAD)</span></label>
+                <p class="help">Lebih cepat untuk video yang banyak heningnya, tapi bisa melewatkan dialog yang pelan atau berbisik. Matikan kalau ada dialog yang hilang.</p>
+              </div>
+            </div>
+            <div class="grid2 mt" id="set-asr-api" hidden>
+              <div>
+                <label class="label" for="set-asr-url">URL API</label>
+                <input id="set-asr-url" type="url" spellcheck="false" />
+              </div>
+              <div>
+                <label class="label" for="set-asr-key">API key</label>
+                <input id="set-asr-key" type="password" spellcheck="false" />
+              </div>
+              <div>
+                <label class="label" for="set-asr-model">Model</label>
+                <input id="set-asr-model" type="text" spellcheck="false" />
+              </div>
+            </div>
+
+            <h2 class="card-title mt-l">Download &amp; tampilan</h2>
+            <div class="grid2">
+              <div>
+                <span class="label" id="set-out-label">Folder download default</span>
+                <div class="path-row">
+                  <svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>
+                  <span class="path" id="set-out" aria-labelledby="set-out-label"></span>
+                  <button class="btn ghost sm" id="set-out-pick" type="button">Ganti</button>
+                </div>
+              </div>
+              <div>
+                <label class="label" for="set-theme">Tema</label>
+                <select id="set-theme"><option value="system">Ikuti sistem</option><option value="dark">Gelap</option><option value="light">Terang</option></select>
+              </div>
+            </div>
+
+            <div class="actions inside">
+              <span class="save-note" id="set-saved" role="status"></span>
+              <button class="btn primary" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-save"/></svg>Simpan pengaturan</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <!-- ============================== AKTIVITAS (satu kartu per pekerjaan) -->
+      <section class="activity" id="activity" hidden aria-label="Pekerjaan berjalan">
+        <div class="jobs" id="jobs"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="job-tpl">
+    <article class="job">
+      <div class="job-title"></div>
+      <div class="act-head">
+        <span class="act-icon" aria-hidden="true"></span>
+        <div class="act-text">
+          <div class="act-stage" aria-live="polite"></div>
+          <div class="act-detail"></div>
+        </div>
+        <span class="act-pct"></span>
+        <button class="btn danger-ghost sm act-cancel" type="button"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>Batal</button>
+        <button class="btn ghost sm icon-only act-close" type="button" aria-label="Tutup kartu" hidden><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Progres"><span></span></div>
+      <div class="act-steps"></div>
+      <div class="act-result" hidden></div>
+      <details class="act-log">
+        <summary><svg class="icon" aria-hidden="true"><use href="#i-terminal"/></svg>Log <span class="muted act-warn-count"></span></summary>
+        <pre tabindex="0"></pre>
+      </details>
+    </article>
+  </template>
+
+  <!-- Konfirmasi bahasa -->
+  <dialog class="modal" id="lang-dialog" aria-labelledby="lang-dialog-title">
+    <form method="dialog">
+      <div class="modal-icon"><svg class="icon" aria-hidden="true"><use href="#i-sparkles"/></svg></div>
+      <h2 id="lang-dialog-title">Bahasa terdeteksi</h2>
+      <p class="muted dialog-file" id="lang-dialog-file"></p>
+      <p class="detected" id="lang-dialog-name"></p>
+      <p class="muted" id="lang-dialog-reason"></p>
+      <label class="label mt" for="lang-dialog-select">Pakai bahasa</label>
+      <select id="lang-dialog-select" class="lang-select"></select>
+      <div class="modal-actions">
+        <button class="btn ghost" value="cancel" type="submit">Batal</button>
+        <button class="btn primary" value="ok" type="submit" autofocus><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg>Lanjut transcribe</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="app.js"></script>
+  <script src="selftest.js"></script>
+</body>
+</html>

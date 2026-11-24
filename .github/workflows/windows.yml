@@ -1,0 +1,57 @@
+name: Windows build
+
+# Bangun installer (.exe), versi portable, dan CLI untuk Windows.
+# Jalan otomatis saat push ke branch utama / tag v*, atau manual (Actions -> Run workflow).
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # untuk melampirkan file ke GitHub Release saat tag v*
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Test (library & CLI)
+        run: cargo test -p multitool
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build installer (NSIS)
+        working-directory: gui
+        run: cargo tauri build --bundles nsis
+
+      - name: Build CLI
+        run: cargo build --release -p multitool
+
+      - name: Collect files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item (Get-ChildItem target/release/bundle/nsis/*-setup.exe).FullName dist/
+          Copy-Item target/release/multitool-gui.exe dist/MultiTool-portable.exe
+          Copy-Item target/release/multitool.exe dist/multitool-cli.exe
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MultiTool-windows
+          path: dist/*
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

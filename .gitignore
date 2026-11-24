@@ -1,0 +1,7 @@
+/target
+/dist
+/gui/gen
+__pycache__/
+*.pyc
+.env
+.superpowers/
