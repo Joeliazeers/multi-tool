@@ -18,6 +18,15 @@ pub enum Event {
     Log { text: String },
     /// Peringatan (bukan fatal)
     Warn { text: String },
+    /// Keadaan tiap bagian download multi-bagian (semua nilai 0..1 dari ukuran file)
+    Segments { parts: Vec<SegPart> },
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SegPart {
+    pub from: f64,
+    pub to: f64,
+    pub pos: f64,
 }
 
 /// Sink menerima ID pekerjaan (None di luar pekerjaan, mis. CLI) + event.
@@ -32,6 +41,8 @@ static CANCEL: AtomicBool = AtomicBool::new(false);
 pub struct Job {
     pub id: u64,
     pub cancel: Arc<AtomicBool>,
+    /// Bersama `cancel`: berhenti tapi simpan hasil sebagian (jeda), bukan membuangnya (batal).
+    pub keep: Arc<AtomicBool>,
 }
 
 thread_local! {
@@ -69,6 +80,7 @@ pub fn emit(e: Event) {
         Event::Stage { text } => println!("{text}"),
         Event::Log { text } => println!("{text}"),
         Event::Warn { text } => eprintln!("  ! {text}"),
+        Event::Segments { .. } => {}
         Event::Progress { fraction, detail } => {
             let pct = fraction.map(|f| format!("{:5.1}% ", f * 100.0)).unwrap_or_default();
             let line: String = format!("{pct}{detail}").chars().take(110).collect();
@@ -90,6 +102,9 @@ pub fn log(text: impl Into<String>) {
 pub fn warn(text: impl Into<String>) {
     emit(Event::Warn { text: text.into() });
 }
+pub fn segments(parts: Vec<SegPart>) {
+    emit(Event::Segments { parts });
+}
 pub fn progress(fraction: Option<f64>, detail: impl Into<String>) {
     emit(Event::Progress { fraction: fraction.map(|f| f.clamp(0.0, 1.0)), detail: detail.into() });
 }
@@ -106,6 +121,10 @@ pub fn cancelled() -> bool {
     JOB.with(|j| j.borrow().as_ref().map(|j| j.cancel.load(Ordering::SeqCst)))
         .unwrap_or_else(|| CANCEL.load(Ordering::SeqCst))
 }
+/// Apakah pembatalan di thread ini berarti jeda (simpan hasil sebagian)?
+pub fn keep_partial() -> bool {
+    JOB.with(|j| j.borrow().as_ref().map(|j| j.keep.load(Ordering::SeqCst))).unwrap_or(false) && cancelled()
+}
 /// Error kalau user menekan batal.
 pub fn check() -> Result<()> {
     if cancelled() {
@@ -120,8 +139,8 @@ mod tests {
 
     #[test]
     fn per_thread_cancel() {
-        let a = Job { id: 1, cancel: Arc::new(AtomicBool::new(false)) };
-        let b = Job { id: 2, cancel: Arc::new(AtomicBool::new(false)) };
+        let a = Job { id: 1, cancel: Arc::new(AtomicBool::new(false)), keep: Arc::new(AtomicBool::new(false)) };
+        let b = Job { id: 2, cancel: Arc::new(AtomicBool::new(false)), keep: Arc::new(AtomicBool::new(false)) };
         let a2 = a.clone();
         let ta = std::thread::spawn(move || with_job(a2, || {
             std::thread::sleep(std::time::Duration::from_millis(50));

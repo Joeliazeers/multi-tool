@@ -68,6 +68,36 @@
     return;
   }
 
+  // Skenario download file langsung: {"dl": {"url": "...", "dir": "<folder>"}}
+  if (t.dl) {
+    try {
+      go("download");
+      $("#dl-url").value = t.dl.url; S.dl.probedKey = ""; S.dl.info = null;
+      $("#dl-url").dispatchEvent(new Event("input"));
+      await sleep(2500);
+      await log(`[dl] preview hidden=${$("#dl-preview").hidden} judul="${$("#dl-title").textContent}" meta="${$("#dl-meta").textContent}" kualitasHidden=${$("#dl-quality-field").hidden} opsiFileHidden=${$("#dl-file-opts").hidden} opsiYtdlpHidden=${$("#dl-ytdlp-opts").hidden}`);
+      S.dl.dir = t.dl.dir; setPath($("#dl-dir"), t.dl.dir);
+      $("#dl-segments").value = "8";
+      $("#dl-start").click();
+      await sleep(2500);
+      const c = JobCard.all.at(-1);
+      await log(`[dl] berjalan: ${cardState(c)} | bagian=${c.q(".segbar").children.length} segbarHidden=${c.q(".segbar").hidden} jedaHidden=${c.q(".act-pause").hidden}`);
+      c.q(".act-pause").click();
+      await waitFor(() => !c.running, 15000);
+      await log(`[dl] setelah jeda: ${cardState(c)} | ada tombol lanjutkan=${!!c.q(".act-result button")}`);
+      c.q(".act-result button").click();
+      await sleep(1500);
+      const c2 = JobCard.all.at(-1);
+      await log(`[dl] lanjut: ${cardState(c2)}`);
+      await waitFor(() => !c2.running, 60000);
+      await log(`[dl] akhir: ${cardState(c2)} | hasil=${c2.q(".result-path")?.textContent}`);
+      await log("[dl] siap screenshot");
+      await sleep(t.dl.hold || 1000);
+      await log("SELESAI");
+    } catch (e) { await log(`ERROR ${e}`); }
+    return;
+  }
+
   try {
     // 1) Transcribe (deteksi whisper + konfirmasi)
     go("transcribe");

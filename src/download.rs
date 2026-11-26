@@ -81,6 +81,26 @@ pub struct DownloadArgs {
     #[arg(short = 'H', long = "header")]
     #[serde(default)]
     pub headers: Vec<String>,
+
+    /// Jumlah koneksi paralel untuk file langsung, 1-32 (default dari konfigurasi)
+    #[arg(long)]
+    #[serde(default)]
+    pub segments: Option<usize>,
+
+    /// Batas kecepatan download, mis. 2M atau 500K; 0 = tanpa batas (default dari konfigurasi)
+    #[arg(long, value_parser = crate::fetch::limit::parse_size)]
+    #[serde(default)]
+    pub limit: Option<u64>,
+}
+
+impl DownloadArgs {
+    /// File langsung hanya diperiksa bila user tidak memaksa format/playlist yt-dlp.
+    fn may_be_direct(&self) -> bool {
+        non_empty(&self.format).is_none() && !self.playlist
+    }
+    fn parts(&self, cfg: &Config) -> usize {
+        self.segments.unwrap_or(cfg.download_segments).clamp(1, 32)
+    }
 }
 
 fn non_empty(s: &Option<String>) -> Option<&str> {
@@ -102,10 +122,22 @@ fn net_args(c: &mut Command, a: &DownloadArgs) {
 
 const PROG: &str = "VSPROG|";
 
-/// Download dengan yt-dlp, kembalikan path file hasil.
+/// Download: file langsung lewat mesin multi-bagian, selain itu lewat yt-dlp. Kembalikan path hasil.
 pub fn run(cfg: &Config, a: &DownloadArgs) -> Result<Vec<PathBuf>> {
-    util::require_bin("yt-dlp")?;
     let out_dir = a.output_dir.clone().unwrap_or_else(|| cfg.output_dir());
+    if a.may_be_direct()
+        && let Some(info) = crate::fetch::probe(a)
+    {
+        if non_empty(&a.cookies_from_browser).is_some() {
+            report::warn("Cookies browser hanya untuk situs video; untuk file langsung pakai header Cookie (-H).");
+        }
+        report::stage(format!("Download file ke {}", out_dir.display()));
+        let limit = a.limit.unwrap_or(cfg.speed_limit);
+        let file = crate::fetch::download(a, &info, &out_dir, a.parts(cfg), limit)?;
+        report::log(format!("Tersimpan: {}", file.display()));
+        return Ok(vec![file]);
+    }
+    util::require_bin("yt-dlp")?;
     std::fs::create_dir_all(&out_dir)
         .with_context(|| format!("gagal membuat folder {}", out_dir.display()))?;
     let list = tempfile::NamedTempFile::new()?;
@@ -115,6 +147,8 @@ pub fn run(cfg: &Config, a: &DownloadArgs) -> Result<Vec<PathBuf>> {
         c.args(["--encoding", "utf-8"]); // pipa Windows default cp1252: judul non-Latin rusak
     }
     c.arg("--newline")
+        .arg("-N")
+        .arg(a.parts(cfg).to_string()) // fragmen HLS/DASH diunduh paralel
         .arg("--progress-template")
         .arg(format!(
             "download:{PROG}%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress._speed_str)s|%(progress._eta_str)s"
@@ -190,10 +224,29 @@ pub struct VideoInfo {
     pub heights: Vec<u32>,
     pub is_playlist: bool,
     pub entries: usize,
+    /// "video" (lewat yt-dlp) atau "file" (file langsung, mesin multi-bagian)
+    pub kind: String,
+    /// Ukuran file (hanya untuk kind "file", bila diketahui)
+    pub size: Option<u64>,
+    pub filename: Option<String>,
+    /// Server mendukung download multi-bagian dan jeda/lanjut
+    pub ranges: bool,
 }
 
 /// Ambil info video tanpa download (judul, thumbnail, resolusi tersedia).
 pub fn probe(a: &DownloadArgs) -> Result<VideoInfo> {
+    if a.may_be_direct()
+        && let Some(f) = crate::fetch::probe(a)
+    {
+        return Ok(VideoInfo {
+            title: f.name.clone(),
+            kind: "file".into(),
+            size: f.size,
+            filename: Some(f.name),
+            ranges: f.ranges,
+            ..Default::default()
+        });
+    }
     util::require_bin("yt-dlp")?;
     let mut c = util::command("yt-dlp");
     if cfg!(windows) {
@@ -234,5 +287,67 @@ pub fn probe(a: &DownloadArgs) -> Result<VideoInfo> {
         heights,
         is_playlist,
         entries: v["entries"].as_array().map(|e| e.len()).unwrap_or(0),
+        kind: "video".into(),
+        ..Default::default()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fetch::testserver::{Opts, TestServer, sample};
+    use clap::Parser;
+
+    #[derive(Parser)]
+    struct Wrap {
+        #[command(flatten)]
+        a: DownloadArgs,
+    }
+
+    #[test]
+    fn cli_parses_segments_and_limit() {
+        let w = Wrap::try_parse_from(["x", "https://a/b", "--segments", "4", "--limit", "2M"]).unwrap();
+        assert_eq!(w.a.segments, Some(4));
+        assert_eq!(w.a.limit, Some(2 * 1024 * 1024));
+        let w = Wrap::try_parse_from(["x", "https://a/b"]).unwrap();
+        assert_eq!((w.a.segments, w.a.limit), (None, None));
+    }
+
+    #[test]
+    fn old_gui_payload_without_new_fields_still_parses() {
+        let a: DownloadArgs = serde_json::from_str(r#"{"url":"https://a/b","quality":"best"}"#).unwrap();
+        assert_eq!(a.segments, None);
+    }
+
+    #[test]
+    fn probe_reports_direct_file() {
+        let srv = TestServer::start(sample(3000), Opts::default());
+        let a = DownloadArgs { url: srv.url("movie.mkv"), ..Default::default() };
+        let v = probe(&a).unwrap();
+        assert_eq!((v.kind.as_str(), v.size, v.ranges), ("file", Some(3000), true));
+        assert_eq!(v.filename.as_deref(), Some("movie.mkv"));
+    }
+
+    #[test]
+    fn run_downloads_direct_file_without_ytdlp() {
+        let data = sample(3 * 1024 * 1024);
+        let srv = TestServer::start(data.clone(), Opts::default());
+        let dir = tempfile::tempdir().unwrap();
+        let cfg = crate::config::load();
+        let a = DownloadArgs {
+            url: srv.url("a.bin"),
+            output_dir: Some(dir.path().to_path_buf()),
+            segments: Some(3),
+            ..Default::default()
+        };
+        let files = run(&cfg, &a).unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(std::fs::read(&files[0]).unwrap(), data);
+    }
+
+    #[test]
+    fn manual_format_skips_direct_detection() {
+        let a = DownloadArgs { url: "https://a/b".into(), format: Some("best".into()), ..Default::default() };
+        assert!(!a.may_be_direct());
+    }
 }

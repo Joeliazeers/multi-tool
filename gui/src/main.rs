@@ -23,10 +23,13 @@ enum Kind {
     Process,
 }
 
+/// id -> (jenis, tombol batal, "simpan sisa" untuk jeda)
+type Jobs = HashMap<u64, (Kind, Arc<AtomicBool>, Arc<AtomicBool>)>;
+
 struct AppState {
     cfg: Mutex<Config>,
-    /// pekerjaan berjalan: id -> (jenis, tombol batal)
-    jobs: Mutex<HashMap<u64, (Kind, Arc<AtomicBool>)>>,
+    /// pekerjaan yang sedang berjalan
+    jobs: Mutex<Jobs>,
 }
 
 /// Lepaskan pekerjaan dari daftar walau future dibatalkan/panik.
@@ -54,19 +57,20 @@ async fn job<T: Send + 'static>(
     f: impl FnOnce(Config) -> anyhow::Result<T> + Send + 'static,
 ) -> R<T> {
     let cancel = Arc::new(AtomicBool::new(false));
+    let keep = Arc::new(AtomicBool::new(false));
     {
         let mut jobs = state.jobs.lock().unwrap();
-        if kind == Kind::Process && jobs.values().any(|(k, _)| *k == Kind::Process) {
+        if kind == Kind::Process && jobs.values().any(|(k, _, _)| *k == Kind::Process) {
             return Err("Masih ada transcribe/translate yang berjalan.".into());
         }
         if jobs.contains_key(&id) {
             return Err(format!("ID pekerjaan {id} sudah dipakai"));
         }
-        jobs.insert(id, (kind, cancel.clone()));
+        jobs.insert(id, (kind, cancel.clone(), keep.clone()));
     }
     let _slot = JobSlot { state, id };
     let cfg = state.cfg.lock().unwrap().clone();
-    let ctx = report::Job { id, cancel };
+    let ctx = report::Job { id, cancel, keep };
     let res = tauri::async_runtime::spawn_blocking(move || report::with_job(ctx, || f(cfg))).await;
     match res {
         Ok(r) => r.map_err(err),
@@ -111,6 +115,12 @@ fn get_settings(state: State<'_, AppState>) -> Settings {
 fn save_settings(state: State<'_, AppState>, cfg: Config) -> R<String> {
     if cfg.batch_size == 0 {
         return Err("Batch minimal 1".into());
+    }
+    if !(1..=32).contains(&cfg.download_segments) {
+        return Err("Jumlah koneksi download harus 1-32".into());
+    }
+    if !(1..=10).contains(&cfg.download_parallel) {
+        return Err("Download bersamaan harus 1-10".into());
     }
     let path = config::save(&cfg).map_err(err)?;
     *state.cfg.lock().unwrap() = cfg;
@@ -444,7 +454,16 @@ async fn translate_srt(
 
 #[tauri::command]
 fn cancel(state: State<'_, AppState>, job_id: u64) {
-    if let Some((_, c)) = state.jobs.lock().unwrap().get(&job_id) {
+    if let Some((_, c, _)) = state.jobs.lock().unwrap().get(&job_id) {
+        c.store(true, Ordering::SeqCst);
+    }
+}
+
+/// Jeda: berhenti tapi simpan bagian yang sudah diunduh (lanjut dengan download link yang sama).
+#[tauri::command]
+fn pause(state: State<'_, AppState>, job_id: u64) {
+    if let Some((_, c, k)) = state.jobs.lock().unwrap().get(&job_id) {
+        k.store(true, Ordering::SeqCst); // keep dulu, baru cancel
         c.store(true, Ordering::SeqCst);
     }
 }
@@ -515,6 +534,7 @@ fn main() {
             transcribe,
             translate_srt,
             cancel,
+            pause,
             resolve_lang,
             selftest_info,
             selftest_log,

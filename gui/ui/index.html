@@ -31,6 +31,8 @@
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
     <symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
     <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4v16l14-8z"/></symbol>
     <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
     <symbol id="i-qr-code" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
@@ -78,17 +80,17 @@
         <!-- ============================== DOWNLOAD -->
         <section class="page" id="page-download" aria-labelledby="h-download">
           <header class="page-head">
-            <h1 id="h-download">Download video</h1>
-            <p>Tempel link, pilih kualitas, lalu download. Didukung oleh yt-dlp.</p>
+            <h1 id="h-download">Download</h1>
+            <p>Tempel link video atau file. File langsung diunduh multi-bagian supaya lebih cepat; situs video lewat yt-dlp.</p>
           </header>
 
           <div class="card">
-            <label class="label" for="dl-url">Link video</label>
+            <label class="label" for="dl-url">Link (video atau file)</label>
             <div class="input-group">
               <svg class="icon lead" aria-hidden="true"><use href="#i-link"/></svg>
               <input id="dl-url" type="url" placeholder="https://…" autocomplete="off" spellcheck="false" />
               <button class="btn ghost sm" id="dl-check" type="button">
-                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Cek video
+                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Cek link
               </button>
             </div>
 
@@ -107,7 +109,7 @@
           </div>
 
           <div class="card">
-            <fieldset class="field">
+            <fieldset class="field" id="dl-quality-field">
               <legend class="label">Kualitas</legend>
               <div class="segmented" id="dl-quality" role="radiogroup">
                 <label><input type="radio" name="quality" value="best" checked /><span>Terbaik</span></label>
@@ -131,7 +133,19 @@
 
             <details class="advanced">
               <summary><svg class="icon chev" aria-hidden="true"><use href="#i-chevron"/></svg>Opsi lanjutan</summary>
-              <div class="grid2">
+              <div class="grid2" id="dl-file-opts" hidden>
+                <div>
+                  <label class="label" for="dl-segments">Jumlah koneksi</label>
+                  <input id="dl-segments" type="number" min="1" max="32" step="1" inputmode="numeric" />
+                  <p class="help">Satu file dibagi jadi beberapa bagian yang diunduh bersamaan (1-32).</p>
+                </div>
+                <div>
+                  <label class="label" for="dl-limit">Batas kecepatan <span class="opt">MB/s, kosong = ikut pengaturan</span></label>
+                  <input id="dl-limit" type="number" min="0" step="0.1" inputmode="decimal" placeholder="tanpa batas" />
+                  <p class="help">0 berarti tanpa batas. Berlaku untuk semua download file yang sedang berjalan.</p>
+                </div>
+              </div>
+              <div class="grid2" id="dl-ytdlp-opts">
                 <div>
                   <label class="label" for="dl-cookies">Cookies dari browser</label>
                   <select id="dl-cookies">
@@ -484,6 +498,24 @@
               </div>
             </div>
 
+            <div class="grid2 mt">
+              <div>
+                <label class="label" for="set-dl-segments">Koneksi per file</label>
+                <input id="set-dl-segments" type="number" min="1" max="32" step="1" inputmode="numeric" />
+                <p class="help">Berapa bagian satu file diunduh bersamaan (1-32).</p>
+              </div>
+              <div>
+                <label class="label" for="set-dl-limit">Batas kecepatan <span class="opt">MB/s</span></label>
+                <input id="set-dl-limit" type="number" min="0" step="0.1" inputmode="decimal" />
+                <p class="help">0 = tanpa batas. Berlaku total untuk semua download file.</p>
+              </div>
+              <div>
+                <label class="label" for="set-dl-parallel">Download bersamaan</label>
+                <input id="set-dl-parallel" type="number" min="1" max="10" step="1" inputmode="numeric" />
+                <p class="help">Sisanya menunggu di antrean (1-10).</p>
+              </div>
+            </div>
+
             <div class="actions inside">
               <span class="save-note" id="set-saved" role="status"></span>
               <button class="btn primary" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-save"/></svg>Simpan pengaturan</button>
@@ -509,10 +541,12 @@
           <div class="act-detail"></div>
         </div>
         <span class="act-pct"></span>
+        <button class="btn ghost sm act-pause" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg>Jeda</button>
         <button class="btn danger-ghost sm act-cancel" type="button"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>Batal</button>
         <button class="btn ghost sm icon-only act-close" type="button" aria-label="Tutup kartu" hidden><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Progres"><span></span></div>
+      <div class="segbar" hidden aria-hidden="true"></div>
       <div class="act-steps"></div>
       <div class="act-result" hidden></div>
       <details class="act-log">

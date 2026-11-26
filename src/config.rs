@@ -77,6 +77,28 @@ pub struct Config {
     /// Folder hasil download (default: ~/Videos)
     #[arg(long, env = "VIDSUB_OUTPUT_DIR", global = true)]
     pub output_dir: Option<PathBuf>,
+
+    /// Jumlah koneksi paralel untuk download file langsung (1-32)
+    #[arg(long, env = "VIDSUB_DL_SEGMENTS", default_value_t = 8, global = true)]
+    #[serde(default = "default_segments")]
+    pub download_segments: usize,
+
+    /// Batas kecepatan download total, mis. 2M atau 500K (0 = tanpa batas)
+    #[arg(long = "dl-limit", env = "VIDSUB_SPEED_LIMIT", value_parser = crate::fetch::limit::parse_size, default_value = "0", global = true)]
+    #[serde(default)]
+    pub speed_limit: u64,
+
+    /// Maksimal download berjalan bersamaan di GUI
+    #[arg(long, env = "VIDSUB_DL_PARALLEL", default_value_t = 3, global = true)]
+    #[serde(default = "default_parallel")]
+    pub download_parallel: usize,
+}
+
+fn default_segments() -> usize {
+    8
+}
+fn default_parallel() -> usize {
+    3
 }
 
 impl Config {
@@ -136,6 +158,12 @@ impl Config {
         }
         println!("Download");
         println!("  folder       : {}", self.output_dir().display());
+        println!("  koneksi      : {} per file", self.download_segments);
+        match self.speed_limit {
+            0 => println!("  batas        : tanpa batas"),
+            n => println!("  batas        : {:.1} MB/s", n as f64 / 1_048_576.0),
+        }
+        println!("  bersamaan    : {} download (GUI)", self.download_parallel);
     }
 }
 
@@ -193,6 +221,9 @@ fn unsafe_default() -> Config {
         asr_api_key: None,
         asr_api_model: "whisper-large-v3".into(),
         output_dir: None,
+        download_segments: 8,
+        speed_limit: 0,
+        download_parallel: 3,
     }
 }
 
@@ -222,6 +253,9 @@ pub fn save(cfg: &Config) -> anyhow::Result<PathBuf> {
         ("VIDSUB_ASR_API_KEY", opt(&cfg.asr_api_key)),
         ("VIDSUB_ASR_API_MODEL", cfg.asr_api_model.clone()),
         ("VIDSUB_OUTPUT_DIR", path_opt(&cfg.output_dir)),
+        ("VIDSUB_DL_SEGMENTS", cfg.download_segments.to_string()),
+        ("VIDSUB_SPEED_LIMIT", cfg.speed_limit.to_string()),
+        ("VIDSUB_DL_PARALLEL", cfg.download_parallel.to_string()),
     ];
     let existing = std::fs::read_to_string(&path).unwrap_or_default();
     let mut out: Vec<String> = Vec::new();
@@ -279,6 +313,18 @@ mod tests {
             super::default_whisper_python(home, true),
             home.join("whisper-env").join("Scripts").join("python.exe")
         );
+    }
+
+    #[test]
+    fn new_download_keys_are_saved_and_old_configs_get_defaults() {
+        let c = super::unsafe_default();
+        assert_eq!((c.download_segments, c.speed_limit, c.download_parallel), (8, 0, 3));
+        let mut json = serde_json::to_value(&c).unwrap();
+        for k in ["download_segments", "speed_limit", "download_parallel"] {
+            json.as_object_mut().unwrap().remove(k); // payload GUI lama
+        }
+        let old: super::Config = serde_json::from_value(json).unwrap();
+        assert_eq!((old.download_segments, old.speed_limit, old.download_parallel), (8, 0, 3));
     }
 
     #[test]

@@ -142,6 +142,7 @@ class JobCard {
     this.q(".job-title").textContent = title;
     this.q(".act-steps").replaceChildren(...steps.map((s) => h("span", { class: "step" }, s)));
     this.q(".act-cancel").addEventListener("click", () => this.cancel());
+    this.q(".act-pause").addEventListener("click", () => this.pause());
     this.q(".act-close").addEventListener("click", () => this.close());
     this.running = true; this.cancelled = false; this.currentId = null; this.waiter = null;
     this.warns = 0; this.frac = null; this.raf = 0; this.pending = null; this.t0 = Date.now();
@@ -209,11 +210,34 @@ class JobCard {
         this.q(".act-detail").textContent = this.pending.detail;
         this.setBar(this.pending.fraction);
       });
+    } else if (e.kind === "segments") {
+      this.segParts = e.parts;
+      if (!this.segRaf) this.segRaf = requestAnimationFrame(() => { this.segRaf = 0; this.renderSegs(this.segParts); });
     } else if (e.kind === "log") this.log(e.text);
     else if (e.kind === "warn") this.log(e.text, true);
   }
-  waiting(text) {
-    this.stage(text, "Download tetap bisa berjalan bersamaan.");
+  renderSegs(parts) {
+    const bar = this.q(".segbar");
+    bar.hidden = false;
+    if (bar.children.length !== parts.length) {
+      bar.replaceChildren(...parts.map(() => h("div", { class: "seg" }, h("i"))));
+    }
+    parts.forEach((p, k) => {
+      const el = bar.children[k];
+      const w = Math.max(p.to - p.from, 1e-9);
+      el.style.left = `${p.from * 100}%`;
+      el.style.width = `${(p.to - p.from) * 100}%`;
+      el.firstElementChild.style.width = `${Math.min(1, (p.pos - p.from) / w) * 100}%`;
+    });
+  }
+  setPausable(on) { this.q(".act-pause").hidden = !on; }
+  async pause() {
+    this.q(".act-pause").disabled = true;
+    this.stage("Menjeda…");
+    if (this.currentId) await invoke("pause", { jobId: this.currentId });
+  }
+  waiting(text, detail = "Download tetap bisa berjalan bersamaan.") {
+    this.stage(text, detail);
     this.setIcon("clock", "waiting");
     this.setBar(null);
   }
@@ -229,6 +253,8 @@ class JobCard {
     this.running = false;
     clearInterval(this.timer);
     this.q(".act-cancel").hidden = true;
+    this.setPausable(false);
+    this.q(".segbar").hidden = true;
     this.q(".act-close").hidden = false;
     this.stage(title, detail || "");
     this.q(".act-pct").textContent = fmtDur((Date.now() - this.t0) / 1000);
@@ -276,6 +302,29 @@ async function withProcess(card, label, fn) {
   }
 }
 
+/* Antrean download: maksimal `download_parallel` sekaligus (pengaturan); sisanya menunggu giliran. */
+const dlq = { running: 0, waiters: [] };
+async function withDownloadSlot(card, fn) {
+  const max = S.settings?.cfg.download_parallel || 3;
+  if (card.cancelled) throw new Error("Dibatalkan");
+  if (dlq.running >= max) {
+    card.waiting(`Menunggu giliran download… (${dlq.waiters.length + 1} dalam antrean)`, "Dimulai otomatis saat ada download yang selesai.");
+    await new Promise((resolve, reject) => {
+      const w = { resolve, reject: (e) => { dlq.waiters = dlq.waiters.filter((x) => x !== w); card.waiter = null; reject(e); } };
+      card.waiter = w;
+      dlq.waiters.push(w);
+    });
+    card.waiter = null;
+    card.resumed();
+  } else dlq.running++;
+  try {
+    return await fn();
+  } finally {
+    const next = dlq.waiters.shift();
+    if (next) next.resolve(); else dlq.running--;
+  }
+}
+
 function resultRow(path, { openFile = true, extra = [] } = {}) {
   return h("div", { class: "result-row" },
     h("span", { class: "result-path" }, path),
@@ -295,7 +344,10 @@ async function runPipeline(title, steps, fn) {
     await fn(card);
   } catch (err) {
     const msg = String(err);
-    if (/Dibatalkan/.test(msg) || card.cancelled) card.finish(null, "Dibatalkan", "Proses dihentikan.");
+    if (/Dijeda/.test(msg) && !card.cancelled) {
+      card.finish(null, "Dijeda", "Bagian yang sudah diunduh disimpan.");
+      if (card.resumeFn) card.result(h("button", { class: "btn primary sm", type: "button", onclick: () => { card.close(); card.resumeFn(); } }, icon("play"), "Lanjutkan"));
+    } else if (/Dibatalkan/.test(msg) || card.cancelled) card.finish(null, "Dibatalkan", "Proses dihentikan.");
     else {
       card.finish(false, "Gagal", "");
       card.result(h("div", { class: "act-error" }, msg));
@@ -323,6 +375,8 @@ function dlArgs() {
     output_dir: S.dl.dir || null,
     playlist: $("#dl-playlist").checked,
     headers: [],
+    segments: parseInt($("#dl-segments").value, 10) || null,
+    limit: $("#dl-limit").value.trim() === "" ? null : Math.max(0, Math.round(parseFloat($("#dl-limit").value) * 1048576)) || 0,
   };
 }
 function validUrl(u) {
@@ -350,7 +404,19 @@ async function probe(force) {
     const info = await invoke("probe", { args: a });
     if (S.dl.probedKey !== key) return; // sudah ganti link
     S.dl.info = info;
+    applyKind(info.kind);
     $("#dl-thumb").className = "thumb";
+    if (info.kind === "file") {
+      $("#dl-thumb").classList.add("file-thumb");
+      $("#dl-thumb").append(icon("file-text"));
+      $("#dl-title").textContent = info.filename || info.title;
+      $("#dl-meta").replaceChildren(
+        h("span", {}, info.size != null ? fmtSize(info.size) : "ukuran tidak diketahui"),
+        h("span", {}, info.ranges ? "Multi-bagian: ya (bisa dijeda & dilanjutkan)" : "Multi-bagian: tidak (server hanya mengizinkan satu koneksi)"),
+      );
+      applyHeights([]);
+      return;
+    }
     if (info.thumbnail && /^https?:\/\//.test(info.thumbnail)) {
       $("#dl-thumb").append(h("img", { src: info.thumbnail, alt: "", referrerpolicy: "no-referrer", loading: "lazy" }));
     }
@@ -367,12 +433,20 @@ async function probe(force) {
     if (S.dl.probedKey !== key) return;
     pv.hidden = true;
     S.dl.info = null;
+    applyKind("video");
     applyHeights([]);
     err.textContent = `Info video tidak bisa diambil: ${e}. Download tetap bisa dicoba.`;
     err.hidden = false;
   } finally {
     btn.classList.remove("loading"); btn.disabled = false;
   }
+}
+/** File langsung: sembunyikan opsi video (kualitas, yt-dlp), tampilkan koneksi & batas kecepatan. */
+function applyKind(kind) {
+  const file = kind === "file";
+  $("#dl-quality-field").hidden = file;
+  $("#dl-ytdlp-opts").hidden = file;
+  $("#dl-file-opts").hidden = !file;
 }
 function applyHeights(heights) {
   const max = heights.length ? heights[0] : null;
@@ -406,26 +480,43 @@ $("#dl-auto-tl").addEventListener("change", () => ($("#dl-auto-tl-lang").disable
 $("#dl-start").addEventListener("click", () => {
   const a = dlArgs();
   if (!validUrl(a.url)) {
-    $("#dl-probe-error").textContent = a.url ? "Link harus diawali http:// atau https://" : "Masukkan link video dulu.";
+    $("#dl-probe-error").textContent = a.url ? "Link harus diawali http:// atau https://" : "Masukkan link dulu.";
     $("#dl-probe-error").hidden = false;
     $("#dl-url").focus();
     return;
   }
-  const autoTr = $("#dl-auto-tr").checked;
-  const autoTl = autoTr && $("#dl-auto-tl").checked;
-  const tlCode = $("#dl-auto-tl-lang").value;
+  startDownload(a, {
+    autoTr: $("#dl-auto-tr").checked,
+    autoTl: $("#dl-auto-tr").checked && $("#dl-auto-tl").checked,
+    tlCode: $("#dl-auto-tl-lang").value,
+    info: S.dl.info && S.dl.probedKey.startsWith(`${a.url}|`) ? S.dl.info : null,
+  });
+  toast("Download dimulai");
+});
+
+function startDownload(a, o) {
+  const { autoTr, autoTl, tlCode, info } = o;
   const steps = ["Download", ...(autoTr ? ["Transcribe"] : []), ...(autoTl ? ["Translate"] : [])];
-  const title = S.dl.info?.title ? `Download · ${S.dl.info.title}` : `Download · ${a.url}`;
+  const title = info?.title ? `Download · ${info.title}` : `Download · ${a.url}`;
+  const canPause = info?.kind === "file" && info.ranges;
   runPipeline(title, steps, async (card) => {
+    card.resumeFn = () => { startDownload(a, o); toast("Melanjutkan download"); };
     card.step(0);
-    const files = await invoke("download", { jobId: card.newId(), args: a });
-    const rows = files.map((f) => resultRow(f, { extra: [nextBtn("Transcribe", () => { setTrFile(f); go("transcribe"); })] }));
-    if (!autoTr) {
-      card.finish(true, files.length > 1 ? `${files.length} video terdownload` : "Download selesai", basename(files[0]));
+    const files = await withDownloadSlot(card, () => {
+      card.resumed();
+      card.setPausable(canPause);
+      return invoke("download", { jobId: card.newId(), args: a });
+    });
+    card.setPausable(false);
+    const media = files.filter(isMedia);
+    const rows = files.map((f) => resultRow(f, { extra: isMedia(f) ? [nextBtn("Transcribe", () => { setTrFile(f); go("transcribe"); })] : [] }));
+    if (!autoTr || !media.length) {
+      if (autoTr) card.log("Bukan file video/audio: transcribe dilewati.");
+      card.finish(true, files.length > 1 ? `${files.length} file terdownload` : "Download selesai", basename(files[0]));
       return card.result(...rows);
     }
     const outs = [...rows];
-    for (const f of files) {
+    for (const f of media) {
       card.step(1);
       const tr = await withProcess(card, "transcribe", (jobId) => invoke("transcribe", { jobId, input: f, lang: "auto", useLlm: $("#tr-llm").checked, out: null }));
       outs.push(resultRow(tr.srt));
@@ -435,11 +526,10 @@ $("#dl-start").addEventListener("click", () => {
         outs.push(resultRow(tl));
       }
     }
-    card.finish(true, "Semua selesai", `${files.length} video diproses`);
+    card.finish(true, "Semua selesai", `${media.length} video diproses`);
     card.result(...outs);
   });
-  toast("Download dimulai");
-});
+}
 
 /* ------------------------------------------------------------ TRANSCRIBE */
 async function setTrFile(path) {
@@ -668,6 +758,10 @@ function fillSettings() {
   $("#set-asr-key").value = cfg.asr_api_key || "";
   $("#set-asr-model").value = cfg.asr_api_model;
   setPath($("#set-out"), S.settings.output_dir);
+  $("#set-dl-segments").value = cfg.download_segments;
+  $("#set-dl-limit").value = cfg.speed_limit ? +(cfg.speed_limit / 1048576).toFixed(2) : 0;
+  $("#set-dl-parallel").value = cfg.download_parallel;
+  $("#dl-segments").placeholder = String(cfg.download_segments);
   toggleAsr();
   $("#model-name").textContent = cfg.llm_model;
   $("#tl-model").textContent = cfg.llm_model;
@@ -725,6 +819,9 @@ $("#set-form").addEventListener("submit", async (e) => {
     asr_api_key: $("#set-asr-key").value.trim() || null,
     asr_api_model: $("#set-asr-model").value.trim(),
     output_dir: outDir && outDir !== old.output_dir ? outDir : old.cfg.output_dir,
+    download_segments: Math.min(32, Math.max(1, parseInt($("#set-dl-segments").value, 10) || 8)),
+    speed_limit: Math.max(0, Math.round((parseFloat($("#set-dl-limit").value) || 0) * 1048576)),
+    download_parallel: Math.min(10, Math.max(1, parseInt($("#set-dl-parallel").value, 10) || 3)),
   };
   try {
     await invoke("save_settings", { cfg });

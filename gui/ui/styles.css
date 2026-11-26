@@ -446,3 +446,13 @@ button:focus:not(:focus-visible) { outline: none; }
 .qr-actions { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: center; margin-top: var(--s3); }
 #qr-saved { margin-top: var(--s3); }
 input[type="color"].color { width: 100%; min-height: 44px; padding: 4px; cursor: pointer; background: var(--field); border: 1px solid var(--border); border-radius: var(--r); }
+
+/* ---------------------------------------------------------- download multi-bagian */
+.segbar { position: relative; height: 10px; margin-top: var(--s2); border-radius: 3px; background: var(--field); overflow: hidden; }
+.segbar[hidden] { display: none; }
+.seg { position: absolute; top: 0; bottom: 0; background: var(--border); box-shadow: inset -1px 0 0 var(--bg, #0000); }
+.seg i { position: absolute; inset: 0 auto 0 0; background: var(--primary-bg); transition: width 150ms linear; }
+.act-pause[hidden] { display: none; }
+.file-thumb { display: grid; place-items: center; color: var(--fg-muted); }
+.file-thumb .icon { width: 36px; height: 36px; }
+@media (prefers-reduced-motion: reduce) { .seg i { transition: none; } }

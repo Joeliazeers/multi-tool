@@ -4,6 +4,7 @@ pub mod asr;
 pub mod audio;
 pub mod config;
 pub mod download;
+pub mod fetch;
 pub mod lang;
 pub mod llm;
 pub mod qr;

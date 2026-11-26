@@ -2,7 +2,7 @@
 
 Aplikasi desktop **GUI** (Rust + Tauri) dan CLI untuk:
 
-1. **Download video** dengan `yt-dlp`: cukup masukkan link. Referer, cookies browser, dan format bersifat opsional.
+1. **Download**: masukkan link. **Link file langsung** (zip, iso, mp4, …) diunduh *multi-bagian* ala IDM (banyak koneksi sekaligus, bisa dijeda dan dilanjutkan); **link situs video** (YouTube dll.) lewat `yt-dlp`. Referer, cookies browser, dan format bersifat opsional.
 2. **Transcribe video → SRT**: bahasa ditebak whisper (atau dipilih manual), whisper membuat transkrip, lalu LLM merapikannya menjadi SRT dalam bahasa yang dipilih.
 3. **Translate SRT** ke bahasa apa pun dengan LLM, **tanpa sensor** (makian, slang, dan konten eksplisit diterjemahkan apa adanya).
 4. **QR Code** dari link/teks, simpan sebagai PNG, JPG, SVG, WebP, atau BMP.
@@ -67,9 +67,15 @@ Atau biarkan GitHub membangunnya: push ke repo, lalu lihat *Actions → Windows 
 
 Klik shortcut **MultiTool**, atau jalankan `multitool-gui`.
 
-- **Download** — tempel link → judul, thumbnail & resolusi tersedia muncul otomatis. Pilih kualitas
-  (Terbaik/1080p/720p/480p/360p/Audio saja), referer, folder simpan, cookies browser. Bisa langsung
-  lanjut transcribe & translate setelah download.
+- **Download** — tempel link. Situs video: judul, thumbnail & resolusi tersedia muncul otomatis; pilih
+  kualitas (Terbaik/1080p/720p/480p/360p/Audio saja), referer, folder simpan, cookies browser; bisa
+  langsung lanjut transcribe & translate. **File langsung** (nama, ukuran, dan dukungan multi-bagian
+  muncul otomatis): satu file dibagi jadi beberapa bagian (default 8 koneksi, maks 32) yang diunduh
+  bersamaan; bagian yang selesai lebih dulu ikut membantu bagian yang lambat. Tombol **Jeda / Lanjutkan**
+  tetap bekerja walau aplikasi ditutup (tempel link yang sama lagi untuk melanjutkan). Gagal sebagian
+  diulang otomatis, server yang membatasi koneksi ditangani dengan menurunkan jumlah koneksi, dan ukuran
+  akhir file selalu dicocokkan. Batas kecepatan dan jumlah download bersamaan (default 3, sisanya antre)
+  diatur di Pengaturan.
 - **Transcribe** — pilih atau seret video ke jendela. Bahasa otomatis (hasil tebakan LLM ditampilkan
   untuk dikonfirmasi) atau manual. Simpan ke folder lain / "Simpan sebagai…".
 - **Translate** — pratinjau SRT, bahasa asal/tujuan, gaya bahasa (gaul, formal, …), lokasi simpan.
@@ -99,6 +105,7 @@ Atau lewat perintah langsung:
 # download (referer opsional, -o = folder simpan, -q = kualitas)
 multitool download "https://contoh.com/video" -r "https://situs-embed.com/" -o ~/Videos/film -q 720p
 multitool download "URL" --cookies-from-browser firefox
+multitool download "https://contoh.com/file.iso" --segments 16 --limit 5M   # file langsung, 16 koneksi, maks 5 MB/s
 
 # transcribe: bahasa auto (whisper menebak) atau manual
 multitool transcribe video.mp4                 # -> video.<lang>.srt
